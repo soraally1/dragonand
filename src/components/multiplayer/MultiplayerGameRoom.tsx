@@ -48,6 +48,28 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 
+// Function to format Dungeon Master responses with better visual formatting
+const formatDungeonMasterText = (text: string): string => {
+  if (!text) return 'Selamat datang di petualangan Anda! Dungeon Master sedang mempersiapkan cerita...';
+  
+  // Split text into paragraphs
+  const paragraphs = text.split('\n\n').filter(p => p.trim());
+  
+  return paragraphs.map((paragraph, index) => {
+    // Format bold text (**text** -> <strong>text</strong>)
+    const formattedParagraph = paragraph
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-700 dark:text-purple-300 font-semibold">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em class="text-gray-600 dark:text-gray-400 italic">$1</em>')
+      .replace(/\n/g, '<br />')
+      // Add special formatting for dialogue
+      .replace(/"([^"]+)"/g, '<span class="text-blue-600 dark:text-blue-400 font-medium">"$1"</span>')
+      // Add special formatting for important terms
+      .replace(/(\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b)/g, '<span class="text-indigo-600 dark:text-indigo-400 font-medium">$1</span>');
+    
+    return `<p class="mb-4 ${index === 0 ? 'text-lg font-medium' : 'text-base'} leading-relaxed">${formattedParagraph}</p>`;
+  }).join('');
+};
+
 interface MultiplayerGameRoomProps {
   room: GameRoom;
   onLeaveRoom: () => void;
@@ -221,6 +243,13 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
         "Cast a spell",
         "Move to a different location"
       ]);
+    }
+  };
+
+  const handleCustomAction = async () => {
+    const action = prompt('Deskripsikan aksi Anda (gunakan Bahasa Indonesia):');
+    if (action) {
+      await handlePlayerAction(action);
     }
   };
 
@@ -604,22 +633,43 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
             {/* Dungeon Master Area */}
             <Card title="Dungeon Master">
               <div className="space-y-4">
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-4">
-                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
-                    {isLoading ? (
-                      <div className="flex items-center space-x-2">
-                        <RefreshCw className="h-5 w-5 animate-spin text-purple-600" />
-                        <span>The Dungeon Master is thinking...</span>
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-800 relative overflow-hidden">
+                  {/* Decorative background element */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 dark:bg-purple-800 rounded-full opacity-20 transform translate-x-8 -translate-y-8"></div>
+                  <div className="relative z-10">
+                  {isLoading ? (
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-full">
+                        <RefreshCw className="h-6 w-6 animate-spin text-purple-600 dark:text-purple-400" />
                       </div>
-                    ) : (
-                      dungeonMasterResponse || 'Welcome to your multiplayer adventure! The Dungeon Master is preparing your story...'
-                    )}
-                  </p>
+                      <div>
+                        <p className="text-purple-700 dark:text-purple-300 font-medium">The Dungeon Master is thinking...</p>
+                        <p className="text-sm text-purple-600 dark:text-purple-400">Crafting your next adventure...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="prose prose-sm max-w-none">
+                      <div 
+                        className="text-gray-800 dark:text-gray-200 leading-relaxed space-y-4 text-base"
+                        dangerouslySetInnerHTML={{ 
+                          __html: formatDungeonMasterText(dungeonMasterResponse || 'Welcome to your multiplayer adventure! The Dungeon Master is preparing your story...') 
+                        }}
+                      />
+                      <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center space-x-2 text-sm text-purple-600 dark:text-purple-400">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                          <span>Dungeon Master is ready for your next action...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  </div>
                 </div>
 
                 {currentRoom.currentScene && (
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <strong>Current Scene:</strong> {currentRoom.currentScene}
+                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span><strong>Current Scene:</strong> {currentRoom.currentScene}</span>
                   </div>
                 )}
               </div>
@@ -643,18 +693,32 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {suggestedActions.map((action, index) => (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {suggestedActions.map((action, index) => (
+                        <Button
+                          key={index}
+                          onClick={() => handlePlayerAction(action)}
+                          variant="secondary"
+                          disabled={isLoading}
+                          className="text-left justify-start"
+                        >
+                          {action}
+                        </Button>
+                      ))}
+                    </div>
+                    
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                       <Button
-                        key={index}
-                        onClick={() => handlePlayerAction(action)}
-                        variant="secondary"
+                        onClick={handleCustomAction}
+                        variant="primary"
                         disabled={isLoading}
-                        className="text-left justify-start"
+                        icon={<MessageSquare className="h-5 w-5" />}
+                        className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
                       >
-                        {action}
+                        Custom Action
                       </Button>
-                    ))}
+                    </div>
                   </div>
                 </div>
               </Card>
