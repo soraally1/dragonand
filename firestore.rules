@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - users can read/write their own data and subcollections
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // User's rooms subcollection
+      match /rooms/{roomId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User's characters subcollection
+      match /characters/{characterId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User's saved games subcollection
+      match /savedGames/{saveId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User's games subcollection (single player games)
+      match /games/{gameId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Game rooms - allow authenticated users to read/write rooms
+    match /gameRooms/{roomId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Characters collection (legacy support)
+    match /characters/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 
