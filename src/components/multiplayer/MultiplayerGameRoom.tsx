@@ -44,30 +44,38 @@ import {
   Settings,
   LogOut,
   UserX,
-  X
+  X,
+  Sword
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
+import { getProfileIconEmoji } from '@/lib/characterUtils';
 
 // Function to format Dungeon Master responses with better visual formatting
-const formatDungeonMasterText = (text: string): string => {
-  if (!text) return 'Selamat datang di petualangan Anda! Dungeon Master sedang mempersiapkan cerita...';
+const formatDungeonMasterText = (text: string): React.ReactElement => {
+  if (!text) return <span>Selamat datang di petualangan Anda! Dungeon Master sedang mempersiapkan cerita...</span>;
   
   // Split text into paragraphs
   const paragraphs = text.split('\n\n').filter(p => p.trim());
   
-  return paragraphs.map((paragraph, index) => {
-    // Format bold text (**text** -> <strong>text</strong>)
-    const formattedParagraph = paragraph
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-700 dark:text-purple-300 font-semibold">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em class="text-gray-600 dark:text-gray-400 italic">$1</em>')
-      .replace(/\n/g, '<br />')
-      // Add special formatting for dialogue
-      .replace(/"([^"]+)"/g, '<span class="text-blue-600 dark:text-blue-400 font-medium">"$1"</span>')
-      // Add special formatting for important terms
-      .replace(/(\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b)/g, '<span class="text-indigo-600 dark:text-indigo-400 font-medium">$1</span>');
-    
-    return `<p class="mb-4 ${index === 0 ? 'text-lg font-medium' : 'text-base'} leading-relaxed">${formattedParagraph}</p>`;
-  }).join('');
+  return (
+    <div className="space-y-3">
+      {paragraphs.map((paragraph, index) => {
+        // Format bold text (**text** -> <strong>text</strong>)
+        const formattedParagraph = paragraph
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/\n/g, '<br />');
+        
+        return (
+          <p 
+            key={index} 
+            className="text-gray-700 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: formattedParagraph }}
+          />
+        );
+      })}
+    </div>
+  );
 };
 
 interface MultiplayerGameRoomProps {
@@ -231,25 +239,25 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
 
   const generateActionsForPlayer = async (player: any) => {
     try {
-      const actions = await generatePlayerActions(currentRoom, player);
+      const actions = await generatePlayerActions({
+        ...currentRoom,
+        story: currentRoom.story || '',
+        currentScene: currentRoom.currentScene || 'Memulai petualangan',
+        turn: currentRoom.turn,
+        players: currentRoom.players,
+        currentPlayerIndex: currentRoom.currentPlayerIndex
+      }, player);
       setSuggestedActions(actions);
     } catch (error) {
       console.error('Error generating actions:', error);
       setSuggestedActions([
-        "Explore the area",
-        "Talk to nearby NPCs",
-        "Search for clues",
-        "Prepare for combat",
-        "Cast a spell",
-        "Move to a different location"
+        "Jelajahi area sekitar",
+        "Bicara dengan NPC terdekat",
+        "Cari petunjuk atau barang berguna",
+        "Bersiap untuk pertarungan",
+        "Gunakan sihir atau kemampuan khusus",
+        "Pindah ke lokasi yang berbeda"
       ]);
-    }
-  };
-
-  const handleCustomAction = async () => {
-    const action = prompt('Deskripsikan aksi Anda (gunakan Bahasa Indonesia):');
-    if (action) {
-      await handlePlayerAction(action);
     }
   };
 
@@ -276,8 +284,15 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
         }] : []
       };
 
-      // Generate DM response
-      const response = await generateDungeonMasterResponse(currentRoom, action);
+      // Generate DM response with enhanced story continuity
+      const response = await generateDungeonMasterResponse({
+        ...currentRoom,
+        story: currentRoom.story || '',
+        currentScene: currentRoom.currentScene || 'Memulai petualangan',
+        turn: currentRoom.turn,
+        players: currentRoom.players,
+        currentPlayerIndex: currentRoom.currentPlayerIndex
+      }, action);
 
       // Handle experience and rewards
       if (user && action.experienceGained) {
@@ -330,6 +345,13 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
       setDungeonMasterResponse('The Dungeon Master is thinking about your action...');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const customAction = async () => {
+    const action = prompt('Deskripsikan aksi Anda (gunakan Bahasa Indonesia):');
+    if (action) {
+      await handlePlayerAction(action);
     }
   };
 
@@ -615,13 +637,42 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
         {/* Game Events */}
         {gameEvents.length > 0 && (
           <div className="mb-6">
-            <Card title="Recent Events">
+            <Card title="Peristiwa Terbaru">
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {gameEvents.slice(-5).map((event, index) => (
-                  <div key={index} className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                  <div key={index} className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded border-l-4 border-purple-500">
                     {event}
                   </div>
                 ))}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Story Progress */}
+        {currentRoom.story && (
+          <div className="mb-6">
+            <Card title="Progress Cerita">
+              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span>Turn:</span>
+                  <span className="font-semibold text-purple-600">{currentRoom.turn}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Adegan:</span>
+                  <span className="font-semibold text-purple-600">{currentRoom.currentScene}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Status:</span>
+                  <span className={`font-semibold px-2 py-1 rounded text-xs ${
+                    currentRoom.gameState === 'playing' ? 'bg-green-100 text-green-800' :
+                    currentRoom.gameState === 'waiting' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {currentRoom.gameState === 'playing' ? 'Sedang Bermain' :
+                     currentRoom.gameState === 'waiting' ? 'Menunggu Pemain' : 'Selesai'}
+                  </span>
+                </div>
               </div>
             </Card>
           </div>
@@ -633,43 +684,22 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
             {/* Dungeon Master Area */}
             <Card title="Dungeon Master">
               <div className="space-y-4">
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-800 relative overflow-hidden">
-                  {/* Decorative background element */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 dark:bg-purple-800 rounded-full opacity-20 transform translate-x-8 -translate-y-8"></div>
-                  <div className="relative z-10">
-                  {isLoading ? (
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-full">
-                        <RefreshCw className="h-6 w-6 animate-spin text-purple-600 dark:text-purple-400" />
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-4">
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-4">
+                    {isLoading ? (
+                      <div className="flex items-center space-x-2">
+                        <RefreshCw className="h-5 w-5 animate-spin text-purple-600" />
+                        <span className="text-purple-700 font-medium">Dungeon Master sedang berpikir...</span>
                       </div>
-                      <div>
-                        <p className="text-purple-700 dark:text-purple-300 font-medium">The Dungeon Master is thinking...</p>
-                        <p className="text-sm text-purple-600 dark:text-purple-400">Crafting your next adventure...</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="prose prose-sm max-w-none">
-                      <div 
-                        className="text-gray-800 dark:text-gray-200 leading-relaxed space-y-4 text-base"
-                        dangerouslySetInnerHTML={{ 
-                          __html: formatDungeonMasterText(dungeonMasterResponse || 'Welcome to your multiplayer adventure! The Dungeon Master is preparing your story...') 
-                        }}
-                      />
-                      <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800">
-                        <div className="flex items-center space-x-2 text-sm text-purple-600 dark:text-purple-400">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                          <span>Dungeon Master is ready for your next action...</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    ) : (
+                      formatDungeonMasterText(dungeonMasterResponse || 'Selamat datang di petualangan Anda! Dungeon Master sedang mempersiapkan cerita...')
+                    )}
                   </div>
                 </div>
 
                 {currentRoom.currentScene && (
-                  <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span><strong>Current Scene:</strong> {currentRoom.currentScene}</span>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <strong>Current Scene:</strong> {currentRoom.currentScene}
                   </div>
                 )}
               </div>
@@ -681,7 +711,7 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3 mb-4">
                     <div className="text-2xl">
-                      {currentPlayer.character.profileIcon}
+                      {getProfileIconEmoji(currentPlayer.character.profileIcon)}
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white">
@@ -693,32 +723,37 @@ export const MultiplayerGameRoom = ({ room, onLeaveRoom }: MultiplayerGameRoomPr
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-700 flex items-center">
+                      <Sword className="h-4 w-4 mr-2 text-purple-600" />
+                      Pilihan Aksi
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {suggestedActions.map((action, index) => (
                         <Button
                           key={index}
-                          onClick={() => handlePlayerAction(action)}
                           variant="secondary"
+                          size="sm"
+                          onClick={() => handlePlayerAction(action)}
                           disabled={isLoading}
-                          className="text-left justify-start"
+                          className="text-left justify-start h-auto py-3 px-4 hover:bg-purple-50 hover:border-purple-300 transition-colors"
                         >
-                          {action}
+                          <ArrowRight className="h-4 w-4 mr-2 flex-shrink-0 text-purple-600" />
+                          <span className="text-sm font-medium">{action}</span>
                         </Button>
                       ))}
                     </div>
-                    
-                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <Button
-                        onClick={handleCustomAction}
-                        variant="primary"
-                        disabled={isLoading}
-                        icon={<MessageSquare className="h-5 w-5" />}
-                        className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-                      >
-                        Custom Action
-                      </Button>
-                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button
+                      onClick={customAction}
+                      variant="primary"
+                      disabled={isLoading}
+                      icon={<MessageSquare className="h-5 w-5" />}
+                    >
+                      Custom Action
+                    </Button>
                   </div>
                 </div>
               </Card>

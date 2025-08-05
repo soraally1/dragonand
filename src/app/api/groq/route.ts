@@ -79,10 +79,16 @@ PANDUAN NARASI:
 - Gunakan *miring* untuk suasana, bisikan, atau pikiran
 - Buat paragraf pendek untuk keterbacaan
 - Sertakan dialog NPC yang hidup dalam Bahasa Indonesia
-- Akhiri dengan situasi yang membutuhkan keputusan pemain
+- **PENTING: Buat koneksi yang jelas dengan situasi sebelumnya**
+- **PENTING: Setiap aksi pemain harus memiliki konsekuensi dan mempengaruhi alur cerita**
+- **PENTING: Buat situasi yang membutuhkan keputusan pemain berikutnya**
 - **JANGAN sertakan daftar pilihan atau keputusan dalam narasi** (pilihan akan disediakan secara terpisah)
 - **JANGAN tulis "Keputusan kalian:" atau daftar bernomor dalam narasi**
-- Fokus pada deskripsi situasi dan biarkan pemain memilih aksi dari tombol yang tersedia`;
+- **JANGAN tulis "Anda memiliki beberapa pilihan:" atau "Pilih aksi Anda:"**
+- **JANGAN sertakan daftar bernomor atau bullet points dalam narasi**
+- Fokus pada deskripsi situasi dan biarkan pemain memilih aksi dari tombol yang tersedia
+- **PENTING: Pastikan setiap respons mengacu pada aksi sebelumnya dan membangun cerita yang koheren**
+- **PENTING: Akhiri dengan deskripsi situasi yang membutuhkan keputusan, TANPA memberikan daftar pilihan**`;
 
     const completion = await groq.chat.completions.create({
       messages: [
@@ -93,8 +99,8 @@ PANDUAN NARASI:
         {
           role: "user",
           content: playerAction 
-            ? `Pemain ${gameSession.players[gameSession.currentPlayerIndex]?.character?.name || gameSession.players[gameSession.currentPlayerIndex]?.name} telah melakukan aksi: ${playerAction.description}. Bagaimana Anda menanggapi sebagai Dungeon Master? WAJIB gunakan Bahasa Indonesia untuk semua teks, dialog, dan narasi. Gunakan format markdown dan akhiri dengan situasi yang membutuhkan keputusan spesifik.`
-            : "Mulai petualangan! Buat adegan pembuka yang memperkenalkan semua pemain ke cerita dan siapkan tantangan atau situasi pertama yang harus mereka hadapi. WAJIB gunakan Bahasa Indonesia untuk semua teks, dialog, dan narasi. Gunakan format markdown dan akhiri dengan situasi yang membutuhkan keputusan spesifik dari pemain."
+            ? `Pemain ${gameSession.players[gameSession.currentPlayerIndex]?.character?.name || gameSession.players[gameSession.currentPlayerIndex]?.name} telah melakukan aksi: ${playerAction.description}. Tanggapi aksi ini dan buat situasi baru yang membutuhkan keputusan pemain berikutnya. WAJIB gunakan Bahasa Indonesia untuk semua teks, dialog, dan narasi. Gunakan format markdown dan pastikan cerita tetap koheren dan terhubung. JANGAN sertakan daftar pilihan atau "Anda memiliki beberapa pilihan:" dalam narasi.`
+            : "Mulai petualangan! Buat adegan pembuka yang memperkenalkan semua pemain ke cerita dan siapkan tantangan atau situasi pertama yang harus mereka hadapi. WAJIB gunakan Bahasa Indonesia untuk semua teks, dialog, dan narasi. Gunakan format markdown dan buat situasi yang menarik untuk memulai petualangan. JANGAN sertakan daftar pilihan atau 'Anda memiliki beberapa pilihan:' dalam narasi."
         }
       ],
       model: "llama3-8b-8192",
@@ -124,7 +130,9 @@ ${isMultiplayer ? `Pemain lain: ${gameSession.players.filter((p: any) => p.id !=
 - **JANGAN tulis "Berikut adalah" atau "Saran aksi" atau teks penjelasan**
 - **HANYA tulis aksi-aksi dalam format list sederhana**
 - Gunakan Bahasa Indonesia
-- Aksi harus SPESIFIK dan terkait langsung dengan situasi cerita
+- Aksi harus SPESIFIK dan terkait langsung dengan situasi cerita saat ini
+- **PENTING: Aksi harus membuka kemungkinan baru dalam cerita**
+- **PENTING: Setiap aksi harus memiliki tujuan yang jelas dan relevan dengan konteks**
 - Sesuaikan dengan kelas karakter dan situasi saat ini
 
 **FORMAT YANG BENAR:**
